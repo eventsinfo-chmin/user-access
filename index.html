@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>Records Portal</title>
+
+<link
+  rel="stylesheet"
+  href="style.css"
+>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+<div class="header-inner">
+
+<div>
+
+<div class="brand">
+RECORDS
+</div>
+
+<h1>
+Records Portal
+</h1>
+
+</div>
+
+
+<div
+  id="connectionBadge"
+  class="badge checking"
+>
+Checking...
+</div>
+
+
+</div>
+
+</header>
+
+
+
+<main>
+
+
+<section
+  id="inactivePanel"
+  class="panel hidden"
+>
+
+<h2>
+Service Not Activated
+</h2>
+
+<p>
+The administrator has not activated
+the Google Sheet connection.
+</p>
+
+</section>
+
+
+
+<div
+  id="application"
+  class="hidden"
+>
+
+
+<section class="panel">
+
+<h2>
+Search Records
+</h2>
+
+
+<div class="search-row">
+
+<input
+  id="searchInput"
+  type="search"
+  placeholder="Search name, email or information..."
+>
+
+
+<button
+  id="searchButton"
+  onclick="searchRecords()"
+>
+Search
+</button>
+
+</div>
+
+
+<div
+  id="searchMessage"
+  class="message"
+></div>
+
+
+<div
+  id="searchResults"
+  class="results"
+></div>
+
+</section>
+
+
+
+<section class="panel">
+
+<h2>
+Submit Record
+</h2>
+
+
+<form id="recordForm">
+
+
+<div class="field">
+
+<label for="name">
+Full Name
+</label>
+
+<input
+  id="name"
+  type="text"
+  required
+>
+
+</div>
+
+
+<div class="field">
+
+<label for="email">
+Email Address
+</label>
+
+<input
+  id="email"
+  type="email"
+>
+
+</div>
+
+
+<div class="field">
+
+<label for="information">
+Information
+</label>
+
+<textarea
+  id="information"
+  rows="4"
+></textarea>
+
+</div>
+
+
+<button
+  id="saveButton"
+  type="submit"
+>
+Save Record
+</button>
+
+
+<div
+  id="submitMessage"
+  class="message"
+></div>
+
+
+</form>
+
+</section>
+
+
+</div>
+
+
+</main>
+
+
+<script src="app.js"></script>
+
+
+</body>
+
+</html>

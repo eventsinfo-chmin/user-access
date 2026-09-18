@@ -1,0 +1,247 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+
+  background: #f4f6f9;
+
+  color: #1f2937;
+}
+
+header {
+  background: #ffffff;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-inner {
+  max-width: 1000px;
+
+  margin: auto;
+
+  padding: 22px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+}
+
+.brand {
+  color: #64748b;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 2px;
+}
+
+h1 {
+  margin: 4px 0 0;
+
+  font-size: 25px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+main {
+  max-width: 1000px;
+
+  margin: auto;
+
+  padding: 24px;
+}
+
+.panel {
+  background: #ffffff;
+
+  padding: 26px;
+
+  margin-bottom: 22px;
+
+  border-radius: 14px;
+
+  box-shadow:
+    0 5px 25px
+    rgba(0, 0, 0, .05);
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+
+  padding: 12px 13px;
+
+  border: 1px solid #cbd5e1;
+
+  border-radius: 8px;
+
+  font: inherit;
+
+  outline: none;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #2563eb;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  padding: 12px 18px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #2563eb;
+
+  color: white;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .55;
+
+  cursor: not-allowed;
+}
+
+.search-row {
+  display: grid;
+
+  grid-template-columns: 1fr auto;
+
+  gap: 10px;
+}
+
+.badge {
+  padding: 8px 12px;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+.badge.checking {
+  background: #f1f5f9;
+
+  color: #475569;
+}
+
+.badge.connected {
+  background: #dcfce7;
+
+  color: #15803d;
+}
+
+.badge.offline {
+  background: #fee2e2;
+
+  color: #b91c1c;
+}
+
+.message {
+  margin-top: 14px;
+
+  min-height: 18px;
+
+  font-size: 14px;
+
+  color: #64748b;
+}
+
+.message.success {
+  color: #15803d;
+}
+
+.message.error {
+  color: #dc2626;
+}
+
+.results {
+  margin-top: 15px;
+}
+
+.record-card {
+  padding: 15px;
+
+  margin-bottom: 10px;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 9px;
+
+  background: #f8fafc;
+}
+
+.record-name {
+  font-weight: 700;
+
+  margin-bottom: 5px;
+}
+
+.record-detail {
+  color: #475569;
+
+  font-size: 14px;
+}
+
+.record-info {
+  margin-top: 8px;
+
+  white-space: pre-wrap;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+
+  .search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .search-row button {
+    width: 100%;
+  }
+
+}

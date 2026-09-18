@@ -1,5 +1,8 @@
-let SCRIPT_URL = null;
+/************************************************************
+ * USER APPLICATION
+ ************************************************************/
 
+let SCRIPT_URL = "";
 let serviceActive = false;
 
 
@@ -11,38 +14,97 @@ async function initialize() {
 
   try {
 
-    const response =
-      await fetch(
+    setConnectionBadge(
+      "checking",
+      "Checking..."
+    );
 
-        "./config/connection.json?v=" +
-        Date.now(),
 
-        {
-          cache: "no-store"
-        }
+    /*
+     * Load connection.json relative to
+     * the current User website.
+     */
 
+    const configUrl =
+      new URL(
+        "./config/connection.json",
+        window.location.href
       );
 
 
-    if (!response.ok) {
+    /*
+     * Prevent stale configuration.
+     */
+
+    configUrl.searchParams.set(
+      "v",
+      Date.now().toString()
+    );
+
+
+    console.log(
+      "CONFIG URL:",
+      configUrl.href
+    );
+
+
+    const configResponse =
+      await fetch(
+        configUrl.href,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+
+    if (!configResponse.ok) {
 
       throw new Error(
-        "Unable to load connection configuration."
+        "connection.json HTTP " +
+        configResponse.status
       );
 
     }
 
 
     const config =
-      await response.json();
+      await configResponse.json();
 
+
+    console.log(
+      "CONNECTION CONFIG:",
+      config
+    );
+
+
+    /*
+     * Check activation.
+     */
+
+    if (config.active !== true) {
+
+      showInactive(
+        "The administrator has not activated the Google Sheet connection."
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Check script URL.
+     */
 
     if (
-      config.active !== true ||
-      !config.scriptUrl
+      !config.scriptUrl ||
+      typeof config.scriptUrl !== "string"
     ) {
 
-      showInactive();
+      showInactive(
+        "The Google Apps Script URL is missing."
+      );
 
       return;
 
@@ -50,40 +112,99 @@ async function initialize() {
 
 
     SCRIPT_URL =
-      config.scriptUrl;
+      config.scriptUrl.trim();
 
 
     /*
-     * Verify Google Apps Script.
+     * Basic URL validation.
      */
+
+    if (
+      !SCRIPT_URL.startsWith(
+        "https://script.google.com/macros/s/"
+      ) ||
+      !SCRIPT_URL.endsWith(
+        "/exec"
+      )
+    ) {
+
+      showInactive(
+        "The configured Google Apps Script URL is invalid."
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Check ConnectionAPI.
+     */
+
+    const separator =
+      SCRIPT_URL.includes("?")
+        ? "&"
+        : "?";
+
+
+    const statusUrl =
+      SCRIPT_URL +
+      separator +
+      "action=status&t=" +
+      Date.now();
+
+
+    console.log(
+      "STATUS URL:",
+      statusUrl
+    );
+
 
     const statusResponse =
       await fetch(
-
-        SCRIPT_URL +
-
-        "?action=status&t=" +
-
-        Date.now()
-
+        statusUrl,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
       );
+
+
+    if (!statusResponse.ok) {
+
+      throw new Error(
+        "ConnectionAPI HTTP " +
+        statusResponse.status
+      );
+
+    }
 
 
     const status =
       await statusResponse.json();
 
 
-    if (!status.success) {
+    console.log(
+      "CONNECTION API STATUS:",
+      status
+    );
+
+
+    if (status.success !== true) {
 
       throw new Error(
-        "Google Apps Script unavailable."
+        status.message ||
+        "ConnectionAPI status failed."
       );
 
     }
 
 
-    serviceActive =
-      true;
+    /*
+     * Connection successful.
+     */
+
+    serviceActive = true;
 
 
     showActive();
@@ -92,7 +213,10 @@ async function initialize() {
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "INITIALIZATION ERROR:",
+      error
+    );
 
 
     showInactive(
@@ -105,10 +229,13 @@ async function initialize() {
 
 
 /************************************************************
- * ACTIVE
+ * CONNECTION BADGE
  ************************************************************/
 
-function showActive() {
+function setConnectionBadge(
+  status,
+  text
+) {
 
   const badge =
     document.getElementById(
@@ -116,82 +243,60 @@ function showActive() {
     );
 
 
+  if (!badge) {
+    return;
+  }
+
+
   badge.className =
-    "badge connected";
+    "badge " +
+    status;
 
 
   badge.textContent =
-    "● Connected";
-
-
-  document
-    .getElementById(
-      "inactivePanel"
-    )
-    .classList
-    .add("hidden");
-
-
-  document
-    .getElementById(
-      "application"
-    )
-    .classList
-    .remove("hidden");
+    text;
 
 }
 
 
 /************************************************************
- * INACTIVE
+ * SHOW ACTIVE APPLICATION
  ************************************************************/
 
-function showInactive(message) {
+function showActive() {
 
-  SCRIPT_URL = null;
-
-  serviceActive = false;
-
-
-  const badge =
-    document.getElementById(
-      "connectionBadge"
-    );
+  setConnectionBadge(
+    "connected",
+    "● Connected"
+  );
 
 
-  badge.className =
-    "badge offline";
-
-
-  badge.textContent =
-    "● Not Activated";
-
-
-  document
-    .getElementById(
-      "application"
-    )
-    .classList
-    .add("hidden");
-
-
-  const panel =
+  const inactivePanel =
     document.getElementById(
       "inactivePanel"
     );
 
 
-  panel.classList.remove(
-    "hidden"
-  );
+  const application =
+    document.getElementById(
+      "application"
+    );
 
 
-  if (message) {
+  if (inactivePanel) {
 
-    panel
-      .querySelector("p")
-      .textContent =
-        message;
+    inactivePanel.classList.add(
+      "hidden"
+    );
+
+  }
+
+
+  if (application) {
+
+    application.classList.remove(
+      "hidden"
+    );
 
   }
 
@@ -199,7 +304,71 @@ function showInactive(message) {
 
 
 /************************************************************
- * SEARCH
+ * SHOW INACTIVE APPLICATION
+ ************************************************************/
+
+function showInactive(message) {
+
+  serviceActive = false;
+
+
+  setConnectionBadge(
+    "offline",
+    "● Not Activated"
+  );
+
+
+  const application =
+    document.getElementById(
+      "application"
+    );
+
+
+  const inactivePanel =
+    document.getElementById(
+      "inactivePanel"
+    );
+
+
+  if (application) {
+
+    application.classList.add(
+      "hidden"
+    );
+
+  }
+
+
+  if (inactivePanel) {
+
+    inactivePanel.classList.remove(
+      "hidden"
+    );
+
+
+    const paragraph =
+      inactivePanel.querySelector(
+        "p"
+      );
+
+
+    if (
+      paragraph &&
+      message
+    ) {
+
+      paragraph.textContent =
+        message;
+
+    }
+
+  }
+
+}
+
+
+/************************************************************
+ * SEARCH RECORDS
  ************************************************************/
 
 async function searchRecords() {
@@ -209,18 +378,19 @@ async function searchRecords() {
     !SCRIPT_URL
   ) {
 
+    showInactive(
+      "The Google Sheet connection is not active."
+    );
+
     return;
 
   }
 
 
-  const query =
-    document
-      .getElementById(
-        "searchInput"
-      )
-      .value
-      .trim();
+  const searchInput =
+    document.getElementById(
+      "searchInput"
+    );
 
 
   const message =
@@ -235,7 +405,21 @@ async function searchRecords() {
     );
 
 
+  const button =
+    document.getElementById(
+      "searchButton"
+    );
+
+
+  const query =
+    searchInput.value.trim();
+
+
   if (!query) {
+
+    message.className =
+      "message error";
+
 
     message.textContent =
       "Enter something to search.";
@@ -243,12 +427,6 @@ async function searchRecords() {
     return;
 
   }
-
-
-  const button =
-    document.getElementById(
-      "searchButton"
-    );
 
 
   button.disabled = true;
@@ -259,26 +437,42 @@ async function searchRecords() {
 
   results.innerHTML = "";
 
+
+  message.className =
+    "message";
+
+
   message.textContent =
     "Searching...";
 
 
   try {
 
+    const url =
+      SCRIPT_URL +
+      "?action=search&q=" +
+      encodeURIComponent(query) +
+      "&t=" +
+      Date.now();
+
+
     const response =
       await fetch(
-
-        SCRIPT_URL +
-
-        "?action=search&q=" +
-
-        encodeURIComponent(query) +
-
-        "&t=" +
-
-        Date.now()
-
+        url,
+        {
+          cache: "no-store"
+        }
       );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Search HTTP " +
+        response.status
+      );
+
+    }
 
 
     const data =
@@ -286,6 +480,10 @@ async function searchRecords() {
 
 
     if (!data.success) {
+
+      message.className =
+        "message error";
+
 
       message.textContent =
         data.message ||
@@ -297,26 +495,40 @@ async function searchRecords() {
 
 
     const records =
-      data.records || [];
+      Array.isArray(
+        data.records
+      )
+        ? data.records
+        : [];
+
+
+    message.className =
+      "message";
 
 
     message.textContent =
-
       records.length
-
         ? records.length +
           " record(s) found."
-
         : "No records found.";
 
 
-    renderRecords(records);
+    renderRecords(
+      records
+    );
 
   }
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "SEARCH ERROR:",
+      error
+    );
+
+
+    message.className =
+      "message error";
 
 
     message.textContent =
@@ -337,7 +549,7 @@ async function searchRecords() {
 
 
 /************************************************************
- * RENDER RECORDS
+ * DISPLAY SEARCH RESULTS
  ************************************************************/
 
 function renderRecords(records) {
@@ -364,6 +576,10 @@ function renderRecords(records) {
         "record-card";
 
 
+      /*
+       * NAME
+       */
+
       const name =
         document.createElement(
           "div"
@@ -379,8 +595,14 @@ function renderRecords(records) {
         "Unnamed";
 
 
-      card.appendChild(name);
+      card.appendChild(
+        name
+      );
 
+
+      /*
+       * EMAIL
+       */
 
       if (record.email) {
 
@@ -398,12 +620,20 @@ function renderRecords(records) {
           record.email;
 
 
-        card.appendChild(email);
+        card.appendChild(
+          email
+        );
 
       }
 
 
-      if (record.information) {
+      /*
+       * INFORMATION
+       */
+
+      if (
+        record.information
+      ) {
 
         const information =
           document.createElement(
@@ -426,7 +656,9 @@ function renderRecords(records) {
       }
 
 
-      results.appendChild(card);
+      results.appendChild(
+        card
+      );
 
     }
   );
@@ -438,201 +670,228 @@ function renderRecords(records) {
  * SUBMIT RECORD
  ************************************************************/
 
-document
-  .getElementById(
-    "recordForm"
-  )
-  .addEventListener(
+async function submitRecord(event) {
 
-    "submit",
-
-    async function(event) {
-
-      event.preventDefault();
+  event.preventDefault();
 
 
-      if (
-        !serviceActive ||
-        !SCRIPT_URL
-      ) {
+  if (
+    !serviceActive ||
+    !SCRIPT_URL
+  ) {
 
-        return;
+    showInactive(
+      "The Google Sheet connection is not active."
+    );
 
-      }
+    return;
 
-
-      const name =
-        document
-          .getElementById(
-            "name"
-          )
-          .value
-          .trim();
+  }
 
 
-      const email =
-        document
-          .getElementById(
-            "email"
-          )
-          .value
-          .trim();
+  const name =
+    document
+      .getElementById(
+        "name"
+      )
+      .value
+      .trim();
 
 
-      const information =
-        document
-          .getElementById(
-            "information"
-          )
-          .value
-          .trim();
+  const email =
+    document
+      .getElementById(
+        "email"
+      )
+      .value
+      .trim();
 
 
-      const message =
-        document.getElementById(
-          "submitMessage"
-        );
+  const information =
+    document
+      .getElementById(
+        "information"
+      )
+      .value
+      .trim();
 
 
-      const button =
-        document.getElementById(
-          "saveButton"
-        );
+  const message =
+    document.getElementById(
+      "submitMessage"
+    );
 
 
-      if (!name) {
-
-        message.className =
-          "message error";
-
-
-        message.textContent =
-          "Full name is required.";
-
-        return;
-
-      }
+  const button =
+    document.getElementById(
+      "saveButton"
+    );
 
 
-      button.disabled = true;
+  if (!name) {
 
-      button.textContent =
-        "Saving...";
-
-
-      message.className =
-        "message";
+    message.className =
+      "message error";
 
 
-      message.textContent =
-        "Saving...";
+    message.textContent =
+      "Full name is required.";
+
+    return;
+
+  }
 
 
-      try {
+  button.disabled = true;
 
-        const response =
-          await fetch(
-            SCRIPT_URL,
-            {
-
-              method: "POST",
-
-              body:
-                JSON.stringify({
-
-                  action:
-                    "submit",
-
-                  name:
-                    name,
-
-                  email:
-                    email,
-
-                  information:
-                    information
-
-                })
-
-            }
-          );
+  button.textContent =
+    "Saving...";
 
 
-        const data =
-          await response.json();
+  message.className =
+    "message";
 
 
-        if (!data.success) {
-
-          message.className =
-            "message error";
+  message.textContent =
+    "Saving...";
 
 
-          message.textContent =
-            data.message ||
-            "Unable to save record.";
+  try {
 
-          return;
+    const response =
+      await fetch(
+        SCRIPT_URL,
+        {
+
+          method:
+            "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "submit",
+
+              name:
+                name,
+
+              email:
+                email,
+
+              information:
+                information
+
+            })
 
         }
+      );
 
 
-        message.className =
-          "message success";
+    if (!response.ok) {
 
-
-        message.textContent =
-          "Record saved successfully.";
-
-
-        document
-          .getElementById(
-            "recordForm"
-          )
-          .reset();
-
-      }
-
-      catch (error) {
-
-        console.error(error);
-
-
-        message.className =
-          "message error";
-
-
-        message.textContent =
-          "Unable to save record.";
-
-      }
-
-      finally {
-
-        button.disabled = false;
-
-        button.textContent =
-          "Save Record";
-
-      }
+      throw new Error(
+        "Submit HTTP " +
+        response.status
+      );
 
     }
 
-  );
+
+    const data =
+      await response.json();
+
+
+    if (!data.success) {
+
+      message.className =
+        "message error";
+
+
+      message.textContent =
+        data.message ||
+        "Unable to save record.";
+
+      return;
+
+    }
+
+
+    message.className =
+      "message success";
+
+
+    message.textContent =
+      data.message ||
+      "Record saved successfully.";
+
+
+    document
+      .getElementById(
+        "recordForm"
+      )
+      .reset();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "SUBMIT ERROR:",
+      error
+    );
+
+
+    message.className =
+      "message error";
+
+
+    message.textContent =
+      "Unable to save record.";
+
+  }
+
+  finally {
+
+    button.disabled = false;
+
+    button.textContent =
+      "Save Record";
+
+  }
+
+}
 
 
 /************************************************************
- * ENTER SEARCH
+ * EVENT LISTENERS
  ************************************************************/
 
-document
-  .getElementById(
+const recordForm =
+  document.getElementById(
+    "recordForm"
+  );
+
+
+if (recordForm) {
+
+  recordForm.addEventListener(
+    "submit",
+    submitRecord
+  );
+
+}
+
+
+const searchInput =
+  document.getElementById(
     "searchInput"
-  )
-  .addEventListener(
+  );
 
+
+if (searchInput) {
+
+  searchInput.addEventListener(
     "keydown",
-
     function(event) {
 
       if (
@@ -646,12 +905,13 @@ document
       }
 
     }
-
   );
+
+}
 
 
 /************************************************************
- * START
+ * START APPLICATION
  ************************************************************/
 
 initialize();

@@ -98,21 +98,39 @@ async function initialize() {
      */
 
     if (
-      !config.scriptUrl ||
-      typeof config.scriptUrl !== "string"
-    ) {
+  !config.deploymentId ||
+  typeof config.deploymentId !== "string"
+) {
 
-      showInactive(
-        "The Google Apps Script URL is missing."
-      );
+  showInactive(
+    "Google Apps Script Deployment ID is missing."
+  );
 
-      return;
+  return;
+}
 
-    }
+
+const deploymentId =
+  config.deploymentId.trim();
 
 
-    SCRIPT_URL =
-      config.scriptUrl.trim();
+if (
+  !/^[A-Za-z0-9_-]+$/
+    .test(deploymentId)
+) {
+
+  showInactive(
+    "Invalid Google Apps Script Deployment ID."
+  );
+
+  return;
+}
+
+
+SCRIPT_URL =
+  "https://script.google.com/macros/s/" +
+  deploymentId +
+  "/exec";
 
 
     /*

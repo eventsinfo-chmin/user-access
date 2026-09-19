@@ -405,11 +405,6 @@ async function verifyActivation() {
       );
 
 
-    /*
-     * Cache buster is important because
-     * activation status can change.
-     */
-
     configUrl.searchParams.set(
       "v",
       Date.now().toString()
@@ -428,9 +423,19 @@ async function verifyActivation() {
 
     if (!response.ok) {
 
-      throw new Error(
-        "Unable to verify activation."
+      console.warn(
+        "Activation check HTTP:",
+        response.status
       );
+
+      /*
+       * Verification failed.
+       *
+       * Do NOT treat this as administrator
+       * deactivation.
+       */
+
+      return serviceActive;
 
     }
 
@@ -439,13 +444,17 @@ async function verifyActivation() {
       await response.json();
 
 
-    /*
-     * Administrator deactivated connection.
-     */
+    console.log(
+      "Activation check:",
+      config
+    );
 
-    if (
-      config.active !== true
-    ) {
+
+    /******************************************************
+     * CONFIRMED DEACTIVATION
+     ******************************************************/
+
+    if (config.active !== true) {
 
       SCRIPT_URL = "";
 
@@ -462,9 +471,9 @@ async function verifyActivation() {
     }
 
 
-    /*
-     * Verify Deployment ID.
-     */
+    /******************************************************
+     * ACTIVE — VALIDATE DEPLOYMENT ID
+     ******************************************************/
 
     const deploymentId =
       String(
@@ -479,28 +488,24 @@ async function verifyActivation() {
         .test(deploymentId)
     ) {
 
-      SCRIPT_URL = "";
-
-      serviceActive = false;
-
-
-      showInactive(
-        "The Google Sheet connection is not available."
+      console.warn(
+        "Missing or invalid deployment ID."
       );
 
+      /*
+       * Configuration is malformed.
+       * Don't incorrectly label this as
+       * administrator deactivation.
+       */
 
-      return false;
+      return serviceActive;
 
     }
 
 
-    /*
-     * Rebuild Script URL from the CURRENT
-     * deployment ID.
-     *
-     * This also handles the administrator
-     * activating a different deployment.
-     */
+    /******************************************************
+     * BUILD CURRENT SCRIPT URL
+     ******************************************************/
 
     SCRIPT_URL =
       "https://script.google.com/macros/s/" +
@@ -509,6 +514,13 @@ async function verifyActivation() {
 
 
     serviceActive = true;
+
+
+    /*
+     * Make sure UI remains active.
+     */
+
+    showActive();
 
 
     return true;
@@ -524,23 +536,14 @@ async function verifyActivation() {
 
 
     /*
-     * Fail closed.
+     * IMPORTANT:
      *
-     * If activation cannot be verified,
-     * don't allow a write/search request.
+     * A temporary GitHub/network error
+     * does NOT mean the administrator
+     * deactivated the application.
      */
 
-    SCRIPT_URL = "";
-
-    serviceActive = false;
-
-
-    showInactive(
-      "Unable to verify the Google Sheet connection."
-    );
-
-
-    return false;
+    return serviceActive;
 
   }
 
@@ -1110,6 +1113,7 @@ initialize();
  * Re-check activation every 15 seconds.
  */
 
+/*
 setInterval(
   async function() {
 
@@ -1126,3 +1130,4 @@ setInterval(
 
   15000
 );
+*/

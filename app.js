@@ -384,24 +384,179 @@ function showInactive(message) {
 
 }
 
+/************************************************************
+ * VERIFY CURRENT ACTIVATION
+ *
+ * Re-checks connection.json before sensitive actions.
+ *
+ * Returns:
+ * true  = connection is still active
+ * false = connection has been deactivated
+ ************************************************************/
+
+async function verifyActivation() {
+
+  try {
+
+    const configUrl =
+      new URL(
+        "./config/connection.json",
+        window.location.href
+      );
+
+
+    /*
+     * Cache buster is important because
+     * activation status can change.
+     */
+
+    configUrl.searchParams.set(
+      "v",
+      Date.now().toString()
+    );
+
+
+    const response =
+      await fetch(
+        configUrl.href,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Unable to verify activation."
+      );
+
+    }
+
+
+    const config =
+      await response.json();
+
+
+    /*
+     * Administrator deactivated connection.
+     */
+
+    if (
+      config.active !== true
+    ) {
+
+      SCRIPT_URL = "";
+
+      serviceActive = false;
+
+
+      showInactive(
+        "The administrator has deactivated the Google Sheet connection."
+      );
+
+
+      return false;
+
+    }
+
+
+    /*
+     * Verify Deployment ID.
+     */
+
+    const deploymentId =
+      String(
+        config.deploymentId || ""
+      )
+      .trim();
+
+
+    if (
+      !deploymentId ||
+      !/^[A-Za-z0-9_-]+$/
+        .test(deploymentId)
+    ) {
+
+      SCRIPT_URL = "";
+
+      serviceActive = false;
+
+
+      showInactive(
+        "The Google Sheet connection is not available."
+      );
+
+
+      return false;
+
+    }
+
+
+    /*
+     * Rebuild Script URL from the CURRENT
+     * deployment ID.
+     *
+     * This also handles the administrator
+     * activating a different deployment.
+     */
+
+    SCRIPT_URL =
+      "https://script.google.com/macros/s/" +
+      deploymentId +
+      "/exec";
+
+
+    serviceActive = true;
+
+
+    return true;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ACTIVATION CHECK ERROR:",
+      error
+    );
+
+
+    /*
+     * Fail closed.
+     *
+     * If activation cannot be verified,
+     * don't allow a write/search request.
+     */
+
+    SCRIPT_URL = "";
+
+    serviceActive = false;
+
+
+    showInactive(
+      "Unable to verify the Google Sheet connection."
+    );
+
+
+    return false;
+
+  }
+
+}
 
 /************************************************************
  * SEARCH RECORDS
  ************************************************************/
 
 async function searchRecords() {
+const active =
+    await verifyActivation();
 
-  if (
-    !serviceActive ||
-    !SCRIPT_URL
-  ) {
 
-    showInactive(
-      "The Google Sheet connection is not active."
-    );
-
+  if (!active) {
     return;
-
   }
 
 
@@ -693,18 +848,12 @@ async function submitRecord(event) {
   event.preventDefault();
 
 
-  if (
-    !serviceActive ||
-    !SCRIPT_URL
-  ) {
+const active =
+  await verifyActivation();
 
-    showInactive(
-      "The Google Sheet connection is not active."
-    );
-
-    return;
-
-  }
+if (!active) {
+  return;
+}
 
 
   const name =
@@ -889,7 +1038,6 @@ const recordForm =
     "recordForm"
   );
 
-
 if (recordForm) {
 
   recordForm.addEventListener(
@@ -904,7 +1052,6 @@ const searchInput =
   document.getElementById(
     "searchInput"
   );
-
 
 if (searchInput) {
 
@@ -929,7 +1076,53 @@ if (searchInput) {
 
 
 /************************************************************
+ * CHECK CONNECTION WHEN USER RETURNS TO PAGE
+ ************************************************************/
+
+document.addEventListener(
+  "visibilitychange",
+  async function() {
+
+    /*
+     * When the browser tab becomes
+     * visible again, check whether
+     * the administrator has activated
+     * or deactivated the connection.
+     */
+
+    if (!document.hidden) {
+
+      await verifyActivation();
+
+    }
+
+  }
+);
+
+
+/************************************************************
  * START APPLICATION
  ************************************************************/
 
 initialize();
+
+/*
+ * Re-check activation every 15 seconds.
+ */
+
+setInterval(
+  async function() {
+
+    if (
+      document.hidden
+    ) {
+      return;
+    }
+
+
+    await verifyActivation();
+
+  },
+
+  15000
+);
